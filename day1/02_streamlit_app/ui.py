@@ -1,3 +1,4 @@
+# ui.py
 import streamlit as st
 import pandas as pd
 from database import save_to_db, get_chat_history, get_db_count, clear_db
@@ -5,13 +6,13 @@ from llm import generate_response
 from data import create_sample_evaluation_data
 from metrics import get_metrics_descriptions
 
+# --- ページ設定（最初に絶対に書く！） ---
 st.set_page_config(page_title="Gemma Chatbot", layout="wide")
 
+# --- カスタムCSS ---
 st.markdown("""
     <style>
-        .main {
-            background-color: #ffffff;
-        }
+        .main { background-color: #ffffff; }
         .chat-box {
             background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
             padding: 20px;
@@ -19,9 +20,7 @@ st.markdown("""
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             transition: transform 0.2s;
         }
-        .chat-box:hover {
-            transform: scale(1.02);
-        }
+        .chat-box:hover { transform: scale(1.02); }
         .feedback-area textarea {
             background-color: #f9f9f9 !important;
             border-radius: 10px;
@@ -38,7 +37,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-
+# --- チャットページ表示 ---
 def display_chat_page(pipe):
     st.markdown("<div class='chat-box'>", unsafe_allow_html=True)
     st.subheader("\U0001F4AC Chat with Gemma")
@@ -60,9 +59,12 @@ def display_chat_page(pipe):
         st.session_state.feedback_given = False
 
         with st.spinner("\U0001F916 モデルが考え中..."):
-            answer, response_time = generate_response(pipe, user_question)
-            st.session_state.current_answer = answer
-            st.session_state.response_time = response_time
+            try:
+                answer, response_time = generate_response(pipe, user_question)
+                st.session_state.current_answer = answer
+                st.session_state.response_time = response_time
+            except Exception as e:
+                st.error(f"回答生成中にエラーが発生しました: {e}")
             st.rerun()
 
     if st.session_state.current_question and st.session_state.current_answer:
@@ -83,7 +85,7 @@ def display_chat_page(pipe):
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-
+# --- フィードバックフォーム ---
 def display_feedback_form():
     with st.form("feedback_form"):
         st.markdown("<div class='feedback-area'>", unsafe_allow_html=True)
@@ -95,17 +97,20 @@ def display_feedback_form():
         st.markdown("</div>", unsafe_allow_html=True)
 
         if submitted:
-            is_correct = 1.0 if feedback == "正確" else (0.5 if feedback == "部分的に正確" else 0.0)
-            combined_feedback = feedback + (f": {feedback_comment}" if feedback_comment else "")
+            try:
+                is_correct = 1.0 if feedback == "正確" else (0.5 if feedback == "部分的に正確" else 0.0)
+                combined_feedback = feedback + (f": {feedback_comment}" if feedback_comment else "")
 
-            save_to_db(
-                st.session_state.current_question,
-                st.session_state.current_answer,
-                combined_feedback,
-                correct_answer,
-                is_correct,
-                st.session_state.response_time
-            )
-            st.session_state.feedback_given = True
-            st.success("\u2705 フィードバックが保存されました！")
-            st.rerun()
+                save_to_db(
+                    st.session_state.current_question,
+                    st.session_state.current_answer,
+                    combined_feedback,
+                    correct_answer,
+                    is_correct,
+                    st.session_state.response_time
+                )
+                st.success("\u2705 フィードバックが保存されました！")
+                st.session_state.feedback_given = True
+                st.rerun()
+            except Exception as e:
+                st.error(f"フィードバック保存中にエラーが発生しました: {e}")
