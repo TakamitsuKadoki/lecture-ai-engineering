@@ -5,6 +5,8 @@ from llm import generate_response
 from data import create_sample_evaluation_data
 from metrics import get_metrics_descriptions
 
+st.set_page_config(page_title="Gemma Chatbot", layout="wide")
+
 st.markdown("""
     <style>
         .main {
